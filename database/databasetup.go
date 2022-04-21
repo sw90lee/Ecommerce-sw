@@ -24,6 +24,7 @@ func DBset() *mongo.Client {
 		log.Fatal(err)
 	}
 
+	// mongoDB Connect to Check
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
 		log.Println("Failed to connected to mongodb: (")
@@ -33,11 +34,15 @@ func DBset() *mongo.Client {
 	return client
 }
 
-	var Client *mongo.Client = DBset()
+var Client *mongo.Client = DBset()
 
 func UserData(client *mongo.Client, collectionName string) *mongo.Collection {
+	var collection *mongo.Collection = client.Database("Ecommerce").Collection(collectionName)
+	return collection
+
 }
 
 func ProductData(client *mongo.Client, collectionName string) *mongo.Collection {
-
+	var productCollection *mongo.Collection = client.Database("Ecommerce").Collection(collectionName)
+	return productCollection
 }

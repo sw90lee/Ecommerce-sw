@@ -5,6 +5,8 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/swlee/Ecommerce-sw/database"
+	"github.com/swlee/Ecommerce-sw/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
@@ -104,6 +106,52 @@ func (app *Application) RemoveItem() gin.HandlerFunc {
 }
 
 func GetItemFromCart() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user_id := c.Query("id")
+
+		// user_id가 빈문자일 경우 에러 처리
+		if user_id == "" {
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusNotFound, gin.H{"error": "invalid id"})
+			c.Abort()
+			return
+		}
+		// 16진수로 user_id 새롭게 저장
+		usert_id, _ := primitive.ObjectIDFromHex(user_id)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var filledCart models.User
+		err := UserCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: usert_id}}).Decode(&filledCart)
+		if err != nil {
+			log.Println(err)
+			c.IndentedJSON(500, "not found")
+			return
+		}
+
+		// filter_match : 사용자 (user_id) 데이터 얻기,
+		// unwind : $usercart 데이터를 배열에서 우리가 처리할수있는 데이터로 풀어줌
+		// grouping : $_id 도움으로 모든값을 그룹화 함 그러면 집계쿼리가 찾을 수 있는 합계를 찾을수 있다.
+		filter_match := bson.D{{Key: "$match", Value: bson.D{primitive.E{Key: "_id", Value: usert_id}}}}
+		unwind := bson.D{{Key: "$unwind", Value: bson.D{primitive.E{Key: "path", Value: "$usercart"}}}}
+		grouping := bson.D{{Key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, {Key: "total", Value: bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
+		pointCursor, err := UserCollection.Aggregate(ctx, mongo.Pipeline{filter_match, unwind, grouping})
+		if err != nil {
+			log.Println(err)
+		}
+		var listing []bson.M
+		if err = pointCursor.All(ctx, &listing); err != nil {
+			log.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
+		for _, json := range listing {
+			c.IndentedJSON(200, json["total"])
+			c.IndentedJSON(200, filledCart.UserCart)
+		}
+		ctx.Done()
+
+	}
 
 }
 

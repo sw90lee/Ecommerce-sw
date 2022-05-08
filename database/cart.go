@@ -70,10 +70,12 @@ func RemoveCartItem(ctx context.Context, prodCollection, userCollection *mongo.C
 }
 
 func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, userID string) error {
-	// 1. 사용자 카트를 가져옴
-	// 2. 카트의 합계
-	// 3. 품목으로 주문을 작성
-	// 4. 카트 비움
+	// 사용자 카트를 가져옴
+	// 카트의 합계
+	// 물건으로 주문작성
+	// 사용자 컬렉션에 순서 추가
+	// 주문 목록에 카트의 항목 추가
+	// 카트 비움
 
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
@@ -123,6 +125,22 @@ func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, user
 		log.Println(err)
 	}
 
+	// 카트 비우기
+	filter1 := bson.D{primitive.E{Key: "_id", Value: id}}
+	update2 := bson.M{"$push": bson.M{"orders.$[].order_list": bson.M{"$each": getcartitems.UserCart}}}
+	_, err = userCollection.UpdateMany(ctx, filter1, update2)
+	if err != nil {
+		log.Println(err)
+	}
+
+	usercart_empty := make([]models.ProductUser, 0)
+	filter3 := bson.D{primitive.E{Key: "_id", Value: id}}
+	update3 := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "usercart", Value: usercart_empty}}}}
+	_, err = userCollection.UpdateMany(ctx, filter3, update3)
+	if err != nil {
+		return ErrCantBuyCartItem
+	}
+	return nil
 }
 
 func InstantBuyer() {

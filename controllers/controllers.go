@@ -23,11 +23,11 @@ var Validate = validator.New()
 
 // Password HASH 만들기
 func HashPassword(password string) string {
-	byte, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
 		log.Panic(err)
 	}
-	return string(byte)
+	return string(bytes)
 }
 
 //입력받은 Password와 HassPASSWORD 비교하여 검증
@@ -43,8 +43,8 @@ func VerifyPassword(userPassword string, givenPassword string) (bool, string) {
 	return valid, msg
 }
 
+// 회원가입
 func SignUp() gin.HandlerFunc {
-
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
@@ -110,30 +110,25 @@ func SignUp() gin.HandlerFunc {
 	}
 }
 
+//로그인
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
-		var founduser models.User
-
 		var user models.User
+		var founduser models.User
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
 		}
-
 		err := UserCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&founduser)
 		defer cancel()
-
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or password incorrect"})
 			return
 		}
-
 		PasswordIsValid, msg := VerifyPassword(*user.Password, *founduser.Password)
-
 		defer cancel()
-
 		if !PasswordIsValid {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			fmt.Println(msg)
@@ -141,9 +136,7 @@ func Login() gin.HandlerFunc {
 		}
 		token, refreshToken, _ := generate.TokenGenerator(*founduser.Email, *founduser.First_Name, *founduser.Last_Name, founduser.User_ID)
 		defer cancel()
-
 		generate.UpdateAllTokens(token, refreshToken, founduser.User_ID)
-
 		c.JSON(http.StatusFound, founduser)
 
 	}

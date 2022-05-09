@@ -22,7 +22,6 @@ type SignedDetails struct {
 }
 
 var UserData *mongo.Collection = database.UserData(database.Client, "Users")
-
 var SECRET_KEY = os.Getenv("SECRET_KEY")
 
 // Token 생성

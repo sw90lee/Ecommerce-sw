@@ -7,6 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/swlee/Ecommerce-sw/database"
 	"github.com/swlee/Ecommerce-sw/models"
+	generate "github.com/swlee/Ecommerce-sw/tokens"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -113,6 +114,7 @@ func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
+		var founduser models.User
 
 		var user models.User
 		if err := c.BindJSON(&user); err != nil {
@@ -137,10 +139,10 @@ func Login() gin.HandlerFunc {
 			fmt.Println(msg)
 			return
 		}
-		token, refreshToken, _ := generate.TokenGenerator(*founduser.Email, *founduser.First_name, *founduser.Last_name, founduser.User_ID)
+		token, refreshToken, _ := generate.TokenGenerator(*founduser.Email, *founduser.First_Name, *founduser.Last_Name, founduser.User_ID)
 		defer cancel()
 
-		generate.UpdateAllTokens(token, refreshToken, founderuser.User_ID)
+		generate.UpdateAllTokens(token, refreshToken, founduser.User_ID)
 
 		c.JSON(http.StatusFound, founduser)
 
@@ -148,7 +150,26 @@ func Login() gin.HandlerFunc {
 }
 
 func ProductViewerAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		var products models.Product
+		defer cancel()
 
+		if err := c.BindJSON(&products); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		products.Product_ID = primitive.NewObjectID()
+		_, anyerr := ProductCollection.InsertOne(ctx, products)
+		if anyerr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "not inserted"})
+			return
+		}
+		defer cancel()
+		c.JSON(http.StatusOK, "suceesfully added")
+
+	}
 }
 
 func SearchProduct() gin.HandlerFunc {

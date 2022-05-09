@@ -3,6 +3,7 @@ module github.com/swlee/Ecommerce-sw
 go 1.17
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-playground/validator/v10 v10.4.1
 	go.mongodb.org/mongo-driver v1.9.0
@@ -10,7 +11,6 @@ require (
 )
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect
 	github.com/go-playground/universal-translator v0.17.0 // indirect
